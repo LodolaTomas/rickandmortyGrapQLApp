@@ -5,6 +5,7 @@ import { gql, Apollo } from 'apollo-angular';
 import { BehaviorSubject } from 'rxjs';
 import { take, tap } from 'rxjs/operators';
 import { Character, DataResponse, Episode } from '../interfaces/data.interface';
+import { LocalstorageService } from './localstorage.service';
 
 const QUERY = gql`
   {
@@ -48,11 +49,22 @@ export class DataService {
           const { episodes, characters } = data;
           this.episodeSubject.next(episodes.results);
           this.charactersSubject.next(characters.results);
+          this.parseCharactersData(characters.results);
         })
       ).subscribe();
   }
 
-  constructor(private apollo: Apollo) {
+  constructor(private apollo: Apollo, private localStorageSvc: LocalstorageService) {
     this.getDataAPI();
+  }
+
+  private parseCharactersData(characters:Character[]):void{
+    const currentFav =  this.localStorageSvc.getFavoritesCharacters();
+    const newData= characters.map((character:Character) => {
+      const { id } = character;
+      const found = !!currentFav.find((fav: Character) => fav.id === id);
+      return {...character, isFavorite: found};
+    });
+    this.charactersSubject.next(newData);
   }
 }
